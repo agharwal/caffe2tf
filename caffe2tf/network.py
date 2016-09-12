@@ -54,7 +54,7 @@ class Network:
 
     def layer_output(self, layer_name):
         if layer_name not in self._top_outputs:
-            raise ValueError("%d not defined in network" % layer_name)
+            raise ValueError("`%s` not defined in network" % layer_name)
         return self._top(layer_name)
 
     # Layer functions.
