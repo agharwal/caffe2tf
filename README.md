@@ -33,8 +33,8 @@ For loading pre-trained parameters, the code currently relies on the NumPy pickl
 created by [caffe-tensorflow](https://github.com/ethereon/caffe-tensorflow) for
 the corresponding network parameter file. Note that parsing the original Caffe
 file via Protobuf is painfully slow, which is why it is best to rely on the
-converted file. _Note that this feature is untested. I will update this file once
-correctness is verified._
+converted file. _~~Note that this feature is untested. I will update this file once
+correctness is verified.~~_
 
 Additionally, the code includes a [modified copy](SUPPORTED.proto) of
 [caffe.proto](https://github.com/BVLC/caffe/blob/master/src/caffe/proto/caffe.proto)
