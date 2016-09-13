@@ -37,7 +37,11 @@ class Network:
         self._vars = []
         # Layer name to (name, var) mapping.
         self._layer_vars = defaultdict(list)
+
         self._input_format = input_format
+
+        # The NetParameter protobuf message.
+        self._net_param = cpb.NetParameter()
         # Load and parse the prototxt file.
         self._parse_proto(proto)
         # Create network, based on the parse.
@@ -224,12 +228,6 @@ class Network:
         self._add_output_to_lists(output, lp.name, lp.top[0])
 
     def _add_Dropout(self, lp):
-        # If not training, skip layer addition.
-        # NOTE: Assumes that top and bottom layer names are identical.
-        #       Hence, can safely skip creation of new top layer entry.
-        if lp.phase == cpb.TEST:
-            return
-
         for top, bottom in zip(lp.top, lp.bottom):
             with tf.name_scope(top + "/"):
                 output = tf.nn.dropout(self._top(bottom),
@@ -274,9 +272,8 @@ class Network:
                 Type `str`.
         """
         with open(proto, "r") as f:
-            net_parameter = cpb.NetParameter()
-            text_format.Merge(f.read(), net_parameter)
-            for layer_param in net_parameter.layer:
+            text_format.Merge(f.read(), self._net_param)
+            for layer_param in self._net_param.layer:
                 self._layer_params.append(layer_param)
 
     def _top(self, top):
@@ -285,6 +282,10 @@ class Network:
     def _make_network(self):
         """Construct the network using the parsed proto file."""
         for layer_param in self._layer_params:
+            # Does layer need to be skipped?
+            if not self._include_layer(layer_param):
+                logging.info("Skipping: %s", layer_param.name)
+                continue
             if layer_param.type == "Input":
                 self._add_Input(layer_param)
             elif layer_param.type == "Convolution":
@@ -427,3 +428,64 @@ class Network:
 
     def _has_vars(self, layer_proto):
         return layer_proto.name in self._layer_vars
+
+    def _satisfied_NSR(self, nsr):
+        """Check if `NetStateRule` is satisfied based on `NetState`.
+
+        Args:
+            nsr: `NetStateRule` protobuf message.
+
+        Returns:
+            Boolean `True` iff `NetState` agrees with `nsr`.
+        """
+        np_state = self._net_param.state
+        # Phase check.
+        if nsr.phase != np_state.phase:
+            return False
+
+        # Level check.
+        if np_state.level < nsr.min_level or np_state.level > nsr.max_level:
+            return False
+
+        # Stage check.
+        stages = set(np_state.stage)
+        for stage in nsr.stage:
+            # Missing stage? Exclude.
+            if stage not in stages:
+                return False
+        for not_stage in nsr.not_stage:
+            # Stage should be there, but found? Exclude.
+            if not_stage in stages:
+                return False
+
+        return True
+
+    def _include_layer(self, lp):
+        """Check if layer should be included in the network.
+
+        Based on `NetState` of the `NetParameter`.
+
+        Args:
+            lp: `LayerParameter` protobuf message.
+
+        Returns:
+            Boolean `True` iff layer should be included.
+        """
+        # Default behavior.
+        default = True
+        # If inclusion rules defined, exclude by default.
+        if lp.include:
+            default = False
+        # If exclusion rules defined, include by default.
+        if lp.exclude:
+            default = True
+
+        # Include?
+        for include_NSR in lp.include:
+            if self._satisfied_NSR(include_NSR):
+                return True
+        # Exclude?
+        for exclude_NSR in lp.exclude:
+            if self._satisfied_NSR(exclude_NSR):
+                return False
+        return default
