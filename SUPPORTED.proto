@@ -61,39 +61,39 @@ message BlobShape {
 //   optional VarianceNorm variance_norm = 8 [default = FAN_IN];
 // }
 
-// message NetParameter {
-//   optional string name = 1; // consider giving the network a name
-//   // DEPRECATED. See InputParameter. The input blobs to the network.
-//   repeated string input = 3;
-//   // DEPRECATED. See InputParameter. The shape of the input blobs.
-//   repeated BlobShape input_shape = 8;
-// 
-//   // 4D input dimensions -- deprecated.  Use "input_shape" instead.
-//   // If specified, for each input blob there should be four
-//   // values specifying the num, channels, height and width of the input blob.
-//   // Thus, there should be a total of (4 * #input) numbers.
-//   repeated int32 input_dim = 4;
-// 
-//   // Whether the network will force every layer to carry out backward operation.
-//   // If set False, then whether to carry out backward is determined
-//   // automatically according to the net structure and learning rates.
-//   optional bool force_backward = 5 [default = false];
-//   // The current "state" of the network, including the phase, level, and stage.
-//   // Some layers may be included/excluded depending on this state and the states
-//   // specified in the layers' include and exclude fields.
-//   optional NetState state = 6;
-// 
-//   // Print debugging information about results while running Net::Forward,
-//   // Net::Backward, and Net::Update.
-//   optional bool debug_info = 7 [default = false];
-// 
-//   // The layers that make up the net.  Each of their configurations, including
-//   // connectivity and behavior, is specified as a LayerParameter.
-//   repeated LayerParameter layer = 100;  // ID 100 so layers are printed last.
-// 
-//   // DEPRECATED: use 'layer' instead.
-//   repeated V1LayerParameter layers = 2;
-// }
+message NetParameter {
+  optional string name = 1; // consider giving the network a name
+  // DEPRECATED. See InputParameter. The input blobs to the network.
+  // repeated string input = 3;
+  // DEPRECATED. See InputParameter. The shape of the input blobs.
+  // repeated BlobShape input_shape = 8;
+
+  // 4D input dimensions -- deprecated.  Use "input_shape" instead.
+  // If specified, for each input blob there should be four
+  // values specifying the num, channels, height and width of the input blob.
+  // Thus, there should be a total of (4 * #input) numbers.
+  // repeated int32 input_dim = 4;
+
+  // Whether the network will force every layer to carry out backward operation.
+  // If set False, then whether to carry out backward is determined
+  // automatically according to the net structure and learning rates.
+  // optional bool force_backward = 5 [default = false];
+  // The current "state" of the network, including the phase, level, and stage.
+  // Some layers may be included/excluded depending on this state and the states
+  // specified in the layers' include and exclude fields.
+  // optional NetState state = 6;
+
+  // Print debugging information about results while running Net::Forward,
+  // Net::Backward, and Net::Update.
+  // optional bool debug_info = 7 [default = false];
+
+  // The layers that make up the net.  Each of their configurations, including
+  // connectivity and behavior, is specified as a LayerParameter.
+  repeated LayerParameter layer = 100;  // ID 100 so layers are printed last.
+
+  // DEPRECATED: use 'layer' instead.
+  // repeated V1LayerParameter layers = 2;
+}
 
 // NOTE
 // Update the next available ID when you add a new SolverParameter field.
