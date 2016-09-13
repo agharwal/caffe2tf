@@ -2,15 +2,16 @@
 
 This Python library enables the use of [Caffe](http://github.com/BVLC/caffe)
 prototxt file for creating the equivalent neural network in
-[TensorFlow](http://tensorflow.org). It is different from, but complimentary to
+[TensorFlow](http://tensorflow.org).
+While experimenting with different network architectures and hyperparameters, it is 
+convenient to keep track of portable, language independent files encoding this
+information, rather than making copies of Python files.
+caffe2tf is different from, but complimentary to
 [tf-slim](https://github.com/tensorflow/models/tree/master/inception/inception/slim)
 and the wonderful library
 [caffe-tensorflow](https://github.com/ethereon/caffe-tensorflow); these libraries
 allow creation of a network via abstractions within Python code (additionally,
-caffe-tensorflow converts Caffe model parameter files to NumPy pickles). While
-experimenting with different network architectures and hyperparameters, it is 
-convenient to keep track of portable, language independent files encoding this
-information, rather than making copies of Python files.
+caffe-tensorflow converts Caffe model parameter files to NumPy pickles).
 
 caffe2tf is a work in progress, and currently supports the following layers:
   - Input
@@ -19,6 +20,7 @@ caffe2tf is a work in progress, and currently supports the following layers:
   - ReLU
   - Dropout
   - Inner Product
+  - Softmax
 
 I am currently adding support for layers needed for my experiments, but
 if there is interest from the community, I will be happy to add more!
