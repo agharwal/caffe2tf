@@ -61,6 +61,22 @@ class Network:
             raise ValueError("`%s` not defined in network" % layer_name)
         return self._top(layer_name)
 
+    def save(self, path, sess):
+        """Save the network weights to disk.
+
+        Saved as compatible NumPy pickle.
+
+        Args:
+            path: The path of save file on disk.
+            sess: The TensorFlow session.
+        """
+        m = {}
+        for layer_name, name_var_list in self._layer_vars.iteritems():
+            m[layer_name] = {}
+            for var_name, var in name_var_list:
+                m[layer_name][var_name] = var.eval(sess)
+        np.save(path, m)
+
     # Layer functions.
     def _add_Input(self, lp):
         """Add input layer placeholder to network.
