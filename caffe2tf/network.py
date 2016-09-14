@@ -35,6 +35,8 @@ class Network:
         self._layer_params = []
         # List of variables.
         self._vars = []
+        # List of trainable variables.
+        self._tvars = []
         # Layer name to (name, var) mapping.
         self._layer_vars = defaultdict(list)
 
@@ -76,6 +78,14 @@ class Network:
             for var_name, var in name_var_list:
                 m[layer_name][var_name] = var.eval(sess)
         np.save(path, m)
+
+    @property
+    def vars(self):
+        return self._vars
+
+    @property
+    def tvars(self):
+        return self._tvars
 
     # Layer functions.
     def _add_Input(self, lp):
@@ -271,6 +281,8 @@ class Network:
         """
         vars = tf.get_variable(name, shape, trainable=trainable)
         self._vars.append(vars)
+        if trainable:
+            self._tvars.append(vars)
         if layer_name is not None:
             self._layer_vars[layer_name].append((name, vars))
         return vars
