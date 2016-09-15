@@ -9,12 +9,19 @@ import logging
 
 class Network:
     # Public functions.
-    def __init__(self, proto, input_format="NC*"):
+    def __init__(self, proto, inputs=dict(), input_format="NC*"):
         """Create network using structure from Caffe proto file.
 
         Args:
             proto: The plaintext network prototxt file on disk.
                 Type `str`.
+            inputs: Dictionary mapping input variable `top` strings to
+                Tensors. Use this to connect Tensors directly to the
+                network, instead of using `tf.placeholder` type variables
+                that are created by default for all layers of type
+                `Input`. `tf.placeholder` instances will be created for
+                any `top` values missing in the dictionary. Defaults to
+                empty `dict`.
             input_format: The order of inputs specified in the prototxt
                 file. The TensorFlow program is expected to provide inputs
                 in the order `N*C`, where the dimension `N` denotes batch,
@@ -39,11 +46,11 @@ class Network:
         self._tvars = []
         # Layer name to (name, var) mapping.
         self._layer_vars = defaultdict(list)
-
-        self._input_format = input_format
-
         # The NetParameter protobuf message.
         self._net_param = cpb.NetParameter()
+        self._input_format = input_format
+        self._inputs = dict(inputs)
+
         # Load and parse the prototxt file.
         self._parse_proto(proto)
         # Create network, based on the parse.
@@ -128,8 +135,19 @@ class Network:
         else:
             shapes = lp.input_param.shape
         for (top, shape) in zip(lp.top, shapes):
-            output = tf.placeholder(tf.float32,
-                                    list(map(int, reorder(shape.dim))))
+            # Reorder shape to get `N*C` ordering.
+            shape_reordered = tuple(map(int, reorder(shape.dim)))
+            # Check if inputs have been supplied by user.
+            if top in self._inputs:
+                input = self._inputs[top]
+                # Make sure user-specified Tensor shape is compatible
+                # with proto shape specifications.
+                if not input.get_shape().is_compatible_with(shape_reordered):
+                    raise ValueError("Shape of supplied `%s` input incompatible"
+                                     " with proto specifications" % top)
+                output = input
+            else:
+                output = tf.placeholder(tf.float32, shape_reordered, name=top)
             self._add_output_to_lists(output, lp.name, top)
 
     def _add_Convolution(self, lp):
