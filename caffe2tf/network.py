@@ -81,10 +81,20 @@ class Network:
 
     @property
     def vars(self):
+        """The network variables.
+
+        Returns:
+            List of all network TensorFlow variables.
+        """
         return self._vars
 
     @property
     def tvars(self):
+        """Trainable network variables.
+
+        Returns:
+            List of all trainable network TensorFlow variables.
+        """
         return self._tvars
 
     # Layer functions.
