@@ -176,13 +176,17 @@ class Network:
                 "weights",
                 filter_size + [in_channels, out_channels],
                 lp.phase == cpb.TRAIN,
-                lp.name)
+                lp.name,
+                self._FillerParameter_to_initializer(
+                    lp.convolution_param.weight_filler))
             if lp.convolution_param.bias_term:
                 biases = self._make_vars(
                     "biases",
                     [out_channels],
                     lp.phase == cpb.TRAIN,
-                    lp.name)
+                    lp.name,
+                    self._FillerParameter_to_initializer(
+                        lp.convolution_param.bias_filler))
         # For each bottom layer, create convolutional output
         # feature map.
         for (top, bottom) in zip(lp.top, lp.bottom):
@@ -265,13 +269,17 @@ class Network:
                 "weights",
                 [input_ndims, ipp.num_output],
                 lp.phase == cpb.TRAIN,
-                lp.name)
+                lp.name,
+                self._FillerParameter_to_initializer(
+                    ipp.weight_filler))
             if ipp.bias_term:
                 biases = self._make_vars(
                     "biases",
                     [ipp.num_output],
                     lp.phase == cpb.TRAIN,
-                    lp.name)
+                    lp.name,
+                    self._FillerParameter_to_initializer(
+                        ipp.bias_filler))
 
         # Compute output.
         with tf.name_scope(lp.name + "/"):
@@ -296,7 +304,8 @@ class Network:
             self._add_output_to_lists(output, lp.name, top)
 
     # Helper functions.
-    def _make_vars(self, name, shape, trainable, layer_name=None):
+    def _make_vars(self, name, shape, trainable,
+                   layer_name=None, initializer=None):
         """Create variables of given `name` and `shape`.
 
         Args:
@@ -307,7 +316,9 @@ class Network:
             layer_name: Name of layer for which variables will be used.
                 Type `str`. Ignored if set to `None`. Defaults to `None`.
         """
-        vars = tf.get_variable(name, shape, trainable=trainable)
+        vars = tf.get_variable(name, shape,
+                               trainable=trainable,
+                               initializer=initializer)
         self._vars.append(vars)
         if trainable:
             self._tvars.append(vars)
@@ -545,3 +556,25 @@ class Network:
             if self._satisfied_NSR(exclude_NSR):
                 return False
         return default
+
+    def _FillerParameter_to_initializer(self, fp):
+        """FillerParameter protobuf message to TensorFlow initializer.
+
+        It is the caller's responsibility to ensure appropriate and
+        consistent values are assigned to the FillerParameter fields.
+
+        Args:
+            fp: Protobuf message of type `FillerParameter`
+
+        Returns:
+            A TensorFlow initializer op.
+        """
+        if fp.type == "constant":
+            return tf.constant_initializer(fp.value)
+        elif fp.type == "uniform":
+            return tf.random_uniform_initializer(fp.min, fp.max)
+        elif fp.type == "gaussian":
+            return tf.random_normal_intializer(fp.mean, fp.std)
+        else:
+            raise NotImplementedError("Initializer type %s not implemented" %
+                                      fp.type)

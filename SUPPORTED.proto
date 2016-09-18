@@ -40,26 +40,26 @@ message BlobShape {
 //   optional bool encoded = 7 [default = false];
 // }
 
-// message FillerParameter {
-//   // The filler type.
-//   optional string type = 1 [default = 'constant'];
-//   optional float value = 2 [default = 0]; // the value in constant filler
-//   optional float min = 3 [default = 0]; // the min value in uniform filler
-//   optional float max = 4 [default = 1]; // the max value in uniform filler
-//   optional float mean = 5 [default = 0]; // the mean value in Gaussian filler
-//   optional float std = 6 [default = 1]; // the std value in Gaussian filler
-//   // The expected number of non-zero output weights for a given input in
-//   // Gaussian filler -- the default -1 means don't perform sparsification.
-//   optional int32 sparse = 7 [default = -1];
-//   // Normalize the filler variance by fan_in, fan_out, or their average.
-//   // Applies to 'xavier' and 'msra' fillers.
-//   enum VarianceNorm {
-//     FAN_IN = 0;
-//     FAN_OUT = 1;
-//     AVERAGE = 2;
-//   }
-//   optional VarianceNorm variance_norm = 8 [default = FAN_IN];
-// }
+message FillerParameter {
+  // The filler type.
+  optional string type = 1 [default = 'constant'];
+  optional float value = 2 [default = 0]; // the value in constant filler
+  optional float min = 3 [default = 0]; // the min value in uniform filler
+  optional float max = 4 [default = 1]; // the max value in uniform filler
+  optional float mean = 5 [default = 0]; // the mean value in Gaussian filler
+  optional float std = 6 [default = 1]; // the std value in Gaussian filler
+  // The expected number of non-zero output weights for a given input in
+  // Gaussian filler -- the default -1 means don't perform sparsification.
+  // optional int32 sparse = 7 [default = -1];
+  // Normalize the filler variance by fan_in, fan_out, or their average.
+  // Applies to 'xavier' and 'msra' fillers.
+  // enum VarianceNorm {
+  //   FAN_IN = 0;
+  //   FAN_OUT = 1;
+  //   AVERAGE = 2;
+  // }
+  // optional VarianceNorm variance_norm = 8 [default = FAN_IN];
+}
 
 message NetParameter {
   optional string name = 1; // consider giving the network a name
@@ -578,8 +578,8 @@ message ConvolutionParameter {
 
   // optional uint32 group = 5 [default = 1]; // The group size for group conv
 
-  // optional FillerParameter weight_filler = 7; // The filler for the weight
-  // optional FillerParameter bias_filler = 8; // The filler for the bias
+  optional FillerParameter weight_filler = 7; // The filler for the weight
+  optional FillerParameter bias_filler = 8; // The filler for the bias
   // enum Engine {
   //   DEFAULT = 0;
   //   CAFFE = 1;
@@ -806,8 +806,8 @@ message DropoutParameter {
 message InnerProductParameter {
   optional uint32 num_output = 1; // The number of outputs for the layer
   optional bool bias_term = 2 [default = true]; // whether to have bias terms
-  // optional FillerParameter weight_filler = 3; // The filler for the weight
-  // optional FillerParameter bias_filler = 4; // The filler for the bias
+  optional FillerParameter weight_filler = 3; // The filler for the weight
+  optional FillerParameter bias_filler = 4; // The filler for the bias
 
   // // The first axis to be lumped into a single inner product computation;
   // // all preceding axes are retained in the output.
