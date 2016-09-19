@@ -303,6 +303,17 @@ class Network:
                 output = tf.nn.softmax(self._top(bottom))
             self._add_output_to_lists(output, lp.name, top)
 
+    def _add_Reshape(self, lp):
+        for top, bottom in zip(lp.top, lp.bottom):
+            with tf.name_scope(top + "/"):
+                output = tf.reshape(
+                    self._top(bottom),
+                    self._ReshapeParameter_to_shape(
+                        lp.reshape_param,
+                        self._top(bottom).get_shape().as_list()),
+                    name=lp.name)
+            self._add_output_to_lists(output, lp.name, top)
+
     # Helper functions.
     def _make_vars(self, name, shape, trainable,
                    layer_name=None, initializer=None):
@@ -367,6 +378,8 @@ class Network:
                 self._add_Dropout(layer_param)
             elif layer_param.type == "Softmax":
                 self._add_Softmax(layer_param)
+            elif layer_param.type == "Reshape":
+                self._add_Reshape(layer_param)
             else:
                 raise NotImplementedError(
                     "Contact the bugger who wrote this.")
@@ -578,3 +591,71 @@ class Network:
         else:
             raise NotImplementedError("Initializer type %s not implemented" %
                                       fp.type)
+
+    def _ReshapeParameter_to_shape(self, rp, bottom_shape):
+        """ReshapeParameter protobuf message to shape.
+
+        Args:
+            rp: Protobuf message of type `ReshapeParameter`.
+            bottom_shape: Shape of bottom layer to reshape. List or
+                tuple of `int`.
+
+        Return:
+            List of `int` based on `ReshapeParameter` specs.
+
+        Raises:
+            `ValueError` in case of `ReshapeParameter` fields are
+            incompatible with `bottom_shape`.
+        """
+        # First, figure out what dimensions of the bottom layer we
+        # are working with, leaving behind a prefix and a suffix.
+        bottom_len = len(bottom_shape)
+        start_idx = (rp.axis + bottom_len) % bottom_len
+        end_idx = bottom_len
+        if rp.num_axes != -1:
+            end_idx = start_idx + rp.num_axes + 1
+        working_set = bottom_shape[start_idx:end_idx]
+
+        # Reshape them.
+        new_shape = [1] * len(rp.shape.dim)
+        unk_idx = -1
+        # Forward pass until -1 encountered.
+        for idx, dim in enumerate(rp.shape.dim):
+            if dim == 0:
+                new_shape[idx] = working_set[idx]
+            elif dim == -1:
+                unk_idx = idx
+                break
+            else:
+                new_shape[idx] = dim
+        # If -1 encountered at `unk_idx`, we need a backward pass to
+        # determine all remaining dimensions, except the one at the
+        # aforementioned spot.
+        if unk_idx != -1:
+            # Iterate backwards through `new_shape`, until,
+            # but excluding the index `unk_idx`.
+            for idx, dim in enumerate(new_shape[:unk_idx:-1]):
+                if dim == 0:
+                    new_shape[-idx - 1] = working_set[-idx - 1]
+                # Definitely not supposed to find a second
+                # instance of -1.
+                elif dim == -1:
+                    raise ValueError("More than one instance of -1 encountered")
+                else:
+                    new_shape[-idx - 1] = dim
+            # Now, on to figuring out the shape of the
+            # mystery dimension.
+            working_set_prod = np.prod(working_set)
+            new_shape_prod = np.prod(new_shape)
+            # Just in case the user messed up.
+            if working_set_prod % new_shape_prod != 0:
+                raise ValueError(
+                    "Incompatible products while inferring unknown dim.")
+            new_shape[unk_idx] = working_set_prod // new_shape_prod
+
+        # Ensure compatibility.
+        if np.prod(new_shape) != np.prod(working_set):
+            raise ValueError("Incompatible shape specification.")
+
+        # Append prefix and suffix, and return.
+        return bottom_shape[:start_idx] + new_shape + bottom_shape[end_idx:]
