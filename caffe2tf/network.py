@@ -192,7 +192,7 @@ class Network:
         for (top, bottom) in zip(lp.top, lp.bottom):
             input = self._top(bottom)
             # Perform 2D convolution.
-            with tf.name_scope(top + "/"):
+            with tf.name_scope(self._name_scope_builder(top)):
                 # Pad input, if necessary.
                 padded_input = tf.pad(input, padding)
                 # Convolve.
@@ -210,7 +210,7 @@ class Network:
                 "top and bottom layer" % lp.name)
         top = lp.top[0]
         bottom = lp.bottom[0]
-        with tf.name_scope(top + "/"):
+        with tf.name_scope(self._name_scope_builder(top)):
             output = tf.nn.relu(self._top(bottom), name=lp.name)
         self._add_output_to_lists(output, lp.name, top)
 
@@ -227,7 +227,7 @@ class Network:
         # Recover the pooling parameters.
         ksize, padding, strides = self._parse_PoolingParameter(
             pp, input)
-        with tf.name_scope(lp.name):
+        with tf.name_scope(self._name_scope_builder(lp.name)):
             # Pad, if necessary.
             if padding is not None:
                 input = tf.pad(input, padding)
@@ -247,7 +247,7 @@ class Network:
                 "top layer" % lp.name)
 
         inputs = []
-        with tf.name_scope(lp.name + "/"):
+        with tf.name_scope(self._name_scope_builder(lp.name)):
             for bottom in lp.bottom:
                 input = self._top(bottom)
                 shape = input.get_shape().as_list()
@@ -282,7 +282,7 @@ class Network:
                         ipp.bias_filler))
 
         # Compute output.
-        with tf.name_scope(lp.name + "/"):
+        with tf.name_scope(self._name_scope_builder(lp.name)):
             if ipp.bias_term:
                 output = tf.nn.xw_plus_b(input, weights, biases)
             else:
@@ -291,7 +291,7 @@ class Network:
 
     def _add_Dropout(self, lp):
         for top, bottom in zip(lp.top, lp.bottom):
-            with tf.name_scope(top + "/"):
+            with tf.name_scope(self._name_scope_builder(top)):
                 output = tf.nn.dropout(self._top(bottom),
                                        1.0 - lp.dropout_param.dropout_ratio,
                                        name=lp.name)
@@ -299,13 +299,13 @@ class Network:
 
     def _add_Softmax(self, lp):
         for top, bottom in zip(lp.top, lp.bottom):
-            with tf.name_scope(top + "/"):
+            with tf.name_scope(self._name_scope_builder(top)):
                 output = tf.nn.softmax(self._top(bottom))
             self._add_output_to_lists(output, lp.name, top)
 
     def _add_Reshape(self, lp):
         for top, bottom in zip(lp.top, lp.bottom):
-            with tf.name_scope(top + "/"):
+            with tf.name_scope(self._name_scope_builder(top)):
                 output = tf.reshape(
                     self._top(bottom),
                     self._ReshapeParameter_to_shape(
@@ -659,3 +659,17 @@ class Network:
 
         # Append prefix and suffix, and return.
         return bottom_shape[:start_idx] + new_shape + bottom_shape[end_idx:]
+
+    def _name_scope_builder(self, name):
+        """Builds a re-enterable name scope.
+
+        Args:
+            name: Desired name scope. Type `str`.
+
+        Returns:
+            A name scope string.
+        """
+        cur_name = tf.get_variable_scope().name
+        if cur_name:
+            return "%s/%s/" % (cur_name.rstrip("/"), name.rstrip("/"))
+        return "%s/" % name.rstrip("/")
