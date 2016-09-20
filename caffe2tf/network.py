@@ -587,7 +587,7 @@ class Network:
         elif fp.type == "uniform":
             return tf.random_uniform_initializer(fp.min, fp.max)
         elif fp.type == "gaussian":
-            return tf.random_normal_intializer(fp.mean, fp.std)
+            return tf.random_normal_initializer(fp.mean, fp.std)
         else:
             raise NotImplementedError("Initializer type %s not implemented" %
                                       fp.type)
