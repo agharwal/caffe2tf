@@ -175,7 +175,7 @@ class Network:
             weights = self._make_vars(
                 "weights",
                 filter_size + [in_channels, out_channels],
-                lp.phase == cpb.TRAIN,
+                self._is_training(lp.phase),
                 lp.name,
                 self._FillerParameter_to_initializer(
                     lp.convolution_param.weight_filler))
@@ -183,7 +183,7 @@ class Network:
                 biases = self._make_vars(
                     "biases",
                     [out_channels],
-                    lp.phase == cpb.TRAIN,
+                    self._is_training(lp.phase),
                     lp.name,
                     self._FillerParameter_to_initializer(
                         lp.convolution_param.bias_filler))
@@ -268,7 +268,7 @@ class Network:
             weights = self._make_vars(
                 "weights",
                 [input_ndims, ipp.num_output],
-                lp.phase == cpb.TRAIN,
+                self._is_training(lp.phase),
                 lp.name,
                 self._FillerParameter_to_initializer(
                     ipp.weight_filler))
@@ -276,7 +276,7 @@ class Network:
                 biases = self._make_vars(
                     "biases",
                     [ipp.num_output],
-                    lp.phase == cpb.TRAIN,
+                    self._is_training(lp.phase),
                     lp.name,
                     self._FillerParameter_to_initializer(
                         ipp.bias_filler))
@@ -313,6 +313,17 @@ class Network:
                         self._top(bottom).get_shape().as_list()),
                     name=lp.name)
             self._add_output_to_lists(output, lp.name, top)
+
+    def _add_Sigmoid(self, lp):
+        if len(lp.top) != 1 or len(lp.bottom) != 1:
+            raise ValueError(
+                "Sigmoid layers (%s) must have exactly one "
+                "top and bottom layer" % lp.name)
+        top = lp.top[0]
+        bottom = lp.bottom[0]
+        with tf.name_scope(self._name_scope_builder(top)):
+            output = tf.sigmoid(self._top(bottom), name=lp.name)
+        self._add_output_to_lists(output, lp.name, top)
 
     # Helper functions.
     def _make_vars(self, name, shape, trainable,
@@ -380,9 +391,17 @@ class Network:
                 self._add_Softmax(layer_param)
             elif layer_param.type == "Reshape":
                 self._add_Reshape(layer_param)
+            elif layer_param.type == "Sigmoid":
+                self._add_Sigmoid(layer_param)
             else:
                 raise NotImplementedError(
                     "Contact the bugger who wrote this.")
+
+    def _is_training(self, phase):
+        """Global phase overrides local phase in case the network is
+           in test phase; local phase is used otherwise.
+        """
+        return self._net_param.state.phase == cpb.TRAIN and phase == cpb.TRAIN
 
     def _parse_ConvolutionParameter(self, cp, dims=2):
         out_channels = cp.num_output
