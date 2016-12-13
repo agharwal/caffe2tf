@@ -413,7 +413,9 @@ class Network:
             filter_size = cp.kernel_size
 
         # Infer padding width.
-        if len(cp.pad) == 1:
+        if not cp.pad:
+            padding = [0] * dims
+        elif len(cp.pad) == 1:
             padding = [cp.pad[0]] * dims
         else:
             padding = cp.pad
