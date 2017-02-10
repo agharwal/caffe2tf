@@ -1,6 +1,6 @@
 # caffe2tf
 
-This Python library enables the use of [Caffe](http://github.com/BVLC/caffe)
+This Python library (compatible with Tensorflow version 0.12) enables the use of [Caffe](http://github.com/BVLC/caffe)
 prototxt file for creating the equivalent neural network in
 [TensorFlow](http://tensorflow.org).
 While experimenting with different network architectures and hyperparameters, it is 
