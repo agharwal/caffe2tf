@@ -330,6 +330,11 @@ class Network:
                    layer_name=None, initializer=None):
         """Create variables of given `name` and `shape`.
 
+        In case the variable name already exists in scope
+        but reuse is not allowed, it will be enabled within
+        the function scope and the existing variable shall
+        be reused. However, a warning will be issued.
+
         Args:
             name: Variable name. Type `str`.
             shape: A 1-D `Tensor` of type `int32` representing
@@ -338,14 +343,26 @@ class Network:
             layer_name: Name of layer for which variables will be used.
                 Type `str`. Ignored if set to `None`. Defaults to `None`.
         """
-        vars = tf.get_variable(name, shape,
-                               trainable=trainable,
-                               initializer=initializer)
-        self._vars.append(vars)
-        if trainable:
-            self._tvars.append(vars)
-        if layer_name is not None:
-            self._layer_vars[layer_name].append((name, vars))
+        def get_variable():
+            return tf.get_variable(name, shape,
+                                   trainable=trainable,
+                                   initializer=initializer)
+        skip_updates = False
+        try:
+            vars = get_variable()
+        except ValueError:
+            with tf.variable_scope(tf.get_variable_scope(), reuse=True):
+                vars = get_variable()
+                logging.warning("Variable exists, reusing: %s", vars.op.name)
+                skip_updates = True
+        # If this is not the first call for the variable name in the current
+        # network instance, we can skip any internal variable updates.
+        if not skip_updates:
+            self._vars.append(vars)
+            if trainable:
+                self._tvars.append(vars)
+            if layer_name is not None:
+                self._layer_vars[layer_name].append((name, vars))
         return vars
 
     def _add_output_to_lists(self, output, name, top):
