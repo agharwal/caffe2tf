@@ -331,6 +331,54 @@ class Network:
                 output = tf.sigmoid(self._top(bottom), name=lp.name)
             self._add_output_to_lists(output, lp.name, top)
 
+    def _add_Concat(self, lp):
+        if len(lp.top) != 1:
+            raise ValueError(
+                "Concat layers (%s) must have exactly one "
+                "top layer" % lp.name)
+        axis = self._parse_ConcatParameter(lp.concat_param)
+        top = lp.top[0]
+        bottom_tensors = [self._top(name) for name in lp.bottom]
+        with tf.name_scope(self._name_scope_builder(top)):
+            output = tf.concat(bottom_tensors, axis, name=lp.name)
+        self._add_output_to_lists(output, lp.name, top)
+
+    def _add_Slice(self, lp):
+        if len(lp.bottom) != 1:
+            raise ValueError(
+                "Concat layers (%s) must have exactly one "
+                "top layer" % lp.name)
+        bottom_tensor = self._top(lp.bottom[0])
+        axis, slice_points = self._parse_SliceParameter(lp.slice_param)
+        # Recover the total number of axes, and the number of
+        # dimensions along `axis`.
+        bottom_shape = bottom_tensor.get_shape().as_list()
+        num_axes = len(bottom_shape)
+        top_layer_names = self._lp.top
+        # Ensure that the number of slices match the number of top layers.
+        if len(top_layer_names) != (len(slice_points) + 1):
+            raise ValueError(
+                "Slice layers (%s) must have exactly one more"
+                "top layer than slice points" % lp.name)
+        # Make sure the axis index is within range. Note that we need to take
+        # into account negative indices too.
+        if axis < -num_axes or axis >= num_axes:
+            raise ValueError(
+                "Slice layer (%s) axis index mismatch %d for %d axes" %
+                (lp.name, axis, num_axes))
+        start_indices = [0] + slice_points
+        end_indices = slice_points + [bottom_shape[axis]]
+        for (start_idx, end_idx, top) in zip(start_indices,
+                                             end_indices,
+                                             top_layer_names):
+            begin = [0] * num_axes
+            size = bottom_shape
+            begin[axis] = start_idx
+            size[axis] = end_idx - start_idx
+            with tf.name_scope(self._name_scope_builder(top)):
+                output = tf.slice(bottom_tensor, begin, size, name=lp.name)
+                self._add_output_to_lists(output, lp.name, top)
+
     # Helper functions.
     def _make_vars(self, name, shape, trainable,
                    layer_name=None, initializer=None):
@@ -496,6 +544,16 @@ class Network:
             padding = [[p, p] for p in padding]
 
         return ksize, padding, strides
+
+    def _parse_ConcatParameter(self, cp):
+        # Return the axis index.
+        return cp.axis
+
+    def _parse_SliceParameter(self, sp):
+        # Return the axis index.
+        axis = sp.axis
+        slice_points = sp.slice_point
+        return axis, slice_points
 
     def _load(self, model, sess):
         # Load data from file.
