@@ -204,43 +204,44 @@ class Network:
             self._add_output_to_lists(output, lp.name, top)
 
     def _add_ReLU(self, lp):
-        if len(lp.top) != 1 or len(lp.bottom) != 1:
+        if len(lp.top) != len(lp.bottom):
             raise ValueError(
-                "ReLU layers (%s) must have exactly one "
-                "top and bottom layer" % lp.name)
-        top = lp.top[0]
-        bottom = lp.bottom[0]
-        with tf.name_scope(self._name_scope_builder(top)):
-            output = tf.nn.relu(self._top(bottom), name=lp.name)
-        self._add_output_to_lists(output, lp.name, top)
+                "ReLU layers (%s) must have the same number of "
+                "top and bottom layers" % lp.name)
+        for top, bottom in zip(lp.top, lp.bottom):
+            with tf.name_scope(self._name_scope_builder(top)):
+                output = tf.nn.relu(self._top(bottom), name=lp.name)
+            self._add_output_to_lists(output, lp.name, top)
 
     def _add_Pooling(self, lp):
-        if len(lp.top) != 1 or len(lp.bottom) != 1:
+        if len(lp.top) != len(lp.bottom):
             raise ValueError(
-                "Pooling layers (%s) must have exactly one "
-                "top and bottom layer" % lp.name)
-        top = lp.top[0]
-        bottom = lp.bottom[0]
+                "Pooling layers (%s) must have the same number of "
+                "top and bottom layers" % lp.name)
 
         pp = lp.pooling_param
-        input = self._top(bottom)
         # Recover the pooling parameters.
         ksize, padding, strides = self._parse_PoolingParameter(
             pp, input)
-        with tf.name_scope(self._name_scope_builder(lp.name)):
-            # Pad, if necessary.
-            if padding is not None:
-                input = tf.pad(input, padding)
-            if pp.pool == cpb.PoolingParameter.MAX:
-                output = tf.nn.max_pool(input, ksize, strides, "VALID")
-            elif pp.pool == cpb.PoolingParameter.AVE:
-                output = tf.nn.avg_pool(input, ksize, strides, "VALID")
-            else:
-                raise NotImplementedError(
-                    "Unsupported pooling: %s" % pp.pool)
-        self._add_output_to_lists(output, lp.name, top)
+        for top, bottom in zip(lp.top, lp.bottom):
+            input = self._top(bottom)
+            with tf.name_scope(self._name_scope_builder(lp.name)):
+                # Pad, if necessary.
+                if padding is not None:
+                    input = tf.pad(input, padding)
+                if pp.pool == cpb.PoolingParameter.MAX:
+                    output = tf.nn.max_pool(input, ksize, strides, "VALID")
+                elif pp.pool == cpb.PoolingParameter.AVE:
+                    output = tf.nn.avg_pool(input, ksize, strides, "VALID")
+                else:
+                    raise NotImplementedError(
+                        "Unsupported pooling: %s" % pp.pool)
+            self._add_output_to_lists(output, lp.name, top)
 
     def _add_InnerProduct(self, lp):
+        # TODO(agharwal): Add support for multiple top and bottom layers.
+        #                 Users should use Concat and Reshape layers to
+        #                 concatenate multiple bottom layers.
         if len(lp.top) > 1:
             raise ValueError(
                 "InnerProduct layers (%s) must have exactly one "
@@ -298,12 +299,18 @@ class Network:
             self._add_output_to_lists(output, lp.name, top)
 
     def _add_Softmax(self, lp):
+        if len(lp.top) != len(lp.bottom):
+            raise ValueError(
+                "Softmax layers (%s) must have the same number of "
+                "top and bottom layers" % lp.name)
         for top, bottom in zip(lp.top, lp.bottom):
             with tf.name_scope(self._name_scope_builder(top)):
                 output = tf.nn.softmax(self._top(bottom))
             self._add_output_to_lists(output, lp.name, top)
 
     def _add_Reshape(self, lp):
+        # FIXME(agharwal): Possible bug since this is not compensating
+        #                  for order of axes in input.
         for top, bottom in zip(lp.top, lp.bottom):
             with tf.name_scope(self._name_scope_builder(top)):
                 output = tf.reshape(
@@ -315,15 +322,14 @@ class Network:
             self._add_output_to_lists(output, lp.name, top)
 
     def _add_Sigmoid(self, lp):
-        if len(lp.top) != 1 or len(lp.bottom) != 1:
+        if len(lp.top) != len(lp.bottom):
             raise ValueError(
-                "Sigmoid layers (%s) must have exactly one "
-                "top and bottom layer" % lp.name)
-        top = lp.top[0]
-        bottom = lp.bottom[0]
-        with tf.name_scope(self._name_scope_builder(top)):
-            output = tf.sigmoid(self._top(bottom), name=lp.name)
-        self._add_output_to_lists(output, lp.name, top)
+                "Sigmoid layers (%s) must have the same number of "
+                "top and bottom layers" % lp.name)
+        for top, bottom in zip(lp.top, lp.bottom):
+            with tf.name_scope(self._name_scope_builder(top)):
+                output = tf.sigmoid(self._top(bottom), name=lp.name)
+            self._add_output_to_lists(output, lp.name, top)
 
     # Helper functions.
     def _make_vars(self, name, shape, trainable,
