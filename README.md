@@ -33,7 +33,6 @@ Support planned for:
   - 3D Convolution
   - Batch Normalization
   - Deconvolution
-  - Concatenation
 
 For loading pre-trained parameters, the code currently relies on the NumPy pickle
 created by [caffe-tensorflow](https://github.com/ethereon/caffe-tensorflow) for
