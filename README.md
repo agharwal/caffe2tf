@@ -21,7 +21,10 @@ caffe2tf is a work in progress, and currently supports the following layers:
   - Dropout
   - Inner Product
   - Softmax
+  - Sigmoid
   - Reshape
+  - Concat
+  - Slice
 
 I am currently adding support for layers needed for my experiments, but
 if there is interest from the community, I will be happy to add more!
