@@ -219,12 +219,12 @@ class Network:
                 "Pooling layers (%s) must have the same number of "
                 "top and bottom layers" % lp.name)
 
-        pp = lp.pooling_param
-        # Recover the pooling parameters.
-        ksize, padding, strides = self._parse_PoolingParameter(
-            pp, input)
         for top, bottom in zip(lp.top, lp.bottom):
+            pp = lp.pooling_param
+            # Recover the pooling parameters.
             input = self._top(bottom)
+            ksize, padding, strides = self._parse_PoolingParameter(
+                pp, input)
             with tf.name_scope(self._name_scope_builder(lp.name)):
                 # Pad, if necessary.
                 if padding is not None:
