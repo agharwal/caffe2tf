@@ -354,7 +354,7 @@ class Network:
         # dimensions along `axis`.
         bottom_shape = bottom_tensor.get_shape().as_list()
         num_axes = len(bottom_shape)
-        top_layer_names = self._lp.top
+        top_layer_names = lp.top
         # Ensure that the number of slices match the number of top layers.
         if len(top_layer_names) != (len(slice_points) + 1):
             raise ValueError(
@@ -447,6 +447,10 @@ class Network:
                 self._add_Reshape(layer_param)
             elif layer_param.type == "Sigmoid":
                 self._add_Sigmoid(layer_param)
+            elif layer_param.type == "Concat":
+                self._add_Concat(layer_param)
+            elif layer_param.type == "Slice":
+                self._add_Slice(layer_param)
             else:
                 raise NotImplementedError(
                     "Contact the bugger who wrote this.")
@@ -552,7 +556,7 @@ class Network:
     def _parse_SliceParameter(self, sp):
         # Return the axis index.
         axis = sp.axis
-        slice_points = sp.slice_point
+        slice_points = [slice_point for slice_point in sp.slice_point]
         return axis, slice_points
 
     def _load(self, model, sess):
